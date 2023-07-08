@@ -1,0 +1,45 @@
+framework:
+    messenger:
+        failure_transport: failed
+
+        # The bus that is going to be injected when injecting MessageBusInterface
+        default_bus: command.bus
+
+        # Create buses
+        buses:
+            command.bus:
+                default_middleware: allow_no_handlers
+                middleware:
+                    - doctrine_transaction
+                    - validation
+
+            query.bus: ~
+
+            event.bus:
+                default_middleware: allow_no_handlers
+
+        transports:
+            # https://symfony.com/doc/current/messenger.html#transport-configuration
+            async:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                retry_strategy:
+                    max_retries: 3
+                    delay: 1000
+                    multiplier: 2
+
+            to_external_application:
+                dsn: '%env(EXTERNAL_MESSENGER_TRANSPORT_DSN)%'
+                serializer: 'Happyr\MessageSerializer\SerializerRouter'
+
+            from_external_application:
+                dsn: '%env(EXTERNAL_MESSENGER_TRANSPORT_DSN)%'
+                serializer: 'Happyr\MessageSerializer\SerializerRouter'
+
+            failed: 'doctrine://default?queue_name=failed'
+
+            sync: 'sync://'
+
+        routing:
+            # Route your messages to the transports
+            'App\Message\AsyncMessageInterface': async
+            'App\Message\ToExternalMessageInterface': to_external_application

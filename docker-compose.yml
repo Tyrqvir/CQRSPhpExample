@@ -1,0 +1,99 @@
+version: '3.8'
+
+services:
+    order-db:
+        container_name: order-db
+        image: mysql:8.0
+        command: --default-authentication-plugin=mysql_native_password
+        environment:
+            MYSQL_ROOT_PASSWORD: secret
+            MYSQL_DATABASE: symfony_docker
+            MYSQL_USER: symfony
+            MYSQL_PASSWORD: symfony
+        ports:
+            - '4306:3306'
+        volumes:
+            - orderDB:/var/lib/mysql
+        networks:
+            - order
+
+    order-app:
+        restart: always
+        container_name: order-app
+        build:
+            context: ./order-app
+        working_dir: /var/www/html/order-app
+        ports:
+            - '8881:8000'
+        volumes:
+            - ./app/:/var/www/html
+        depends_on:
+            - order-db
+        networks:
+            - order
+            - event
+
+    customer-db:
+        container_name: customer-db
+        image: mysql:8.0
+        command: --default-authentication-plugin=mysql_native_password
+        environment:
+            MYSQL_ROOT_PASSWORD: secret
+            MYSQL_DATABASE: symfony_docker
+            MYSQL_USER: symfony
+            MYSQL_PASSWORD: symfony
+        ports:
+            - '4307:3306'
+        volumes:
+            - customerDB:/var/lib/mysql
+        networks:
+            - customer
+            - event
+
+    customer-app:
+        restart: always
+        container_name: customer-app
+        build:
+            context: ./customer-app
+        working_dir: /var/www/html/customer-app
+        ports:
+            - '8882:8000'
+        volumes:
+            - ./app/:/var/www/html
+        depends_on:
+            - customer-db
+        networks:
+            - customer
+            - event
+
+    message-broker:
+        container_name: message-broker
+        restart: always
+        image: redis
+        ports:
+            - '6379:6379'
+        networks:
+            - event
+
+#    customer-worker-messenger:
+#        container_name: worker-messenger
+#        restart: always
+#        depends_on:
+#            - customer-app
+#        build:
+#            context: ./php-cli
+#        entrypoint: [ "php", "bin/console", "messenger:consume", "async", "--limit=100", "--time-limit=3600", "-vv" ]
+#        working_dir: /var/www
+#        volumes:
+#            - ./app/customer-app:/var/www:z
+#        networks:
+#            - event
+
+networks:
+    event:
+    customer:
+    order:
+
+volumes:
+    orderDB:
+    customerDB:
